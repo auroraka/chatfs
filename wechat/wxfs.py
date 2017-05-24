@@ -2,7 +2,14 @@ from wxpy import *
 import datetime
 import random
 import json
+from pytimeparse.timeparse import timeparse
 
+
+def login_callback():
+    print('[Info] login success')
+
+
+# bot = Bot(login_callback=login_callback)
 bot = Bot(cache_path=True)
 
 tl = ensure_one(bot.friends().search('天龙'))
@@ -12,6 +19,7 @@ bot_group = ensure_one(bot.groups().search('bot group'))
 tuling = Tuling(api_key='c76bb998d96646169621c5ea1f28e155')
 xiaoi = XiaoI('7Rk99vWLUnS3', 'Us2KCaJlo0zENPE35aiN')
 
+SHUT_UP_UTLL = None  # 沉默时间
 # my_friend.send('我在线了')
 
 start_list = {}
@@ -61,10 +69,33 @@ def auto_reply(text, msg):
         return '傻儿子,爸爸爱你'
     elif text.startswith('time') or text.startswith('时间'):
         return str(datetime.datetime.now())
+    elif text.startswith('住口') or text.startswith('住嘴') or text.startswith('闭嘴') or text.startswith('聒噪'):
+        if ' ' in text:
+            text = ' '.join(text.split(' ')[1:])
+        else:
+            text = text[2:]
+        if text == '':
+            secs = 5 * 60
+        else:
+            secs = timeparse(text) or 0
+        global SHUT_UP_UTLL
+        shut_time = datetime.datetime.now() + datetime.timedelta(seconds=secs)
+        if not SHUT_UP_UTLL or shut_time > SHUT_UP_UTLL:
+            SHUT_UP_UTLL = shut_time
+            print('[set shut up time]', secs, SHUT_UP_UTLL)
+        return '好'
     else:
         # tuling.do_reply(msg)
         xiaoi.do_reply(msg)
         # return '听不懂'
+
+
+def random_get(dic, number=2):
+    if len(dic) < number:
+        return ''
+    else:
+        ks = random.sample(dic.keys(), number)
+        return str({k: dic[k] for k in ks})
 
 
 def deal_command(msg):
@@ -101,18 +132,38 @@ def deal_command(msg):
                 return 'delete %s from in list' % args[1]
         return 'no key is match'
     elif args[0] == '\\list':
-        return '[start list]\n' \
-               '%s\n' \
-               '[end list]\n' \
-               '%s\n' \
-               '[in list]\n' \
-               '%s\n' % (str(start_list), str(end_list), str(in_list))
+        if len(start_list) + len(end_list) + len(in_list) > 10:
+            return '太多了显示部分\n' \
+                   '[start list]\n' \
+                   '%s\n' \
+                   '[end list]\n' \
+                   '%s\n' \
+                   '[in list]\n' \
+                   '%s\n' % (random_get(start_list), random_get(end_list), random_get(in_list))
+        else:
+            return '[start list]\n' \
+                   '%s\n' \
+                   '[end list]\n' \
+                   '%s\n' \
+                   '[in list]\n' \
+                   '%s\n' % (str(start_list), str(end_list), str(in_list))
+    elif args[0] == '\\show':
+        for (k, v) in start_list.items():
+            if k == args[1] or v == args[1]:
+                return '[start list] %s:%s' % (k, v)
+        for (k, v) in end_list.items():
+            if k == args[1] or v == args[1]:
+                return '[end list] %s:%s' % (k, v)
+        for (k, v) in in_list.items():
+            if k == args[1] or v == args[1]:
+                return '[in list] %s:%s' % (k, v)
     elif args[0] == '\\help' and len(args) == 1:
         return '\\begin [words_from] [words_to]\n' \
                '\\end [words_from] [words_to]\n' \
                '\\in [words_from] [words_to]\n' \
                '\\delete [key]\n' \
                '\\list\n' \
+               '\\show [key|value]\n' \
                '\\help'
     return random.choice(['不懂', '听不懂', '你说啥'])
 
@@ -156,6 +207,9 @@ def reply_bot_group(msg):
     text = msg2text(msg)
     if text.startswith('\\'):
         return deal_command(msg)
+
+    if SHUT_UP_UTLL and datetime.datetime.now() < SHUT_UP_UTLL:
+        return
 
     for (k, v) in start_list.items():
         if text.startswith(k):

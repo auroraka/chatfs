@@ -1,5 +1,5 @@
 .idea
 .DS_Store
 .py[cod]
-__pacache__/
-.pkl
+__pycache__/
+wxpy.pkl

@@ -1,0 +1,3 @@
+#[submodule "qqbot"]
+#	path = qqbot
+#	url = git@github.com:xhan/qqbot.git

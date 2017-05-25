@@ -227,6 +227,7 @@ class Adapter(Passthrough):
     plugin_name = None
 
     def open(self, path, flags):
+        Log('open', path, flags, level=2)
         node = self.root_node.get_node(path)
         self.open_file_path = node.file_path
         self.written = False
@@ -235,20 +236,23 @@ class Adapter(Passthrough):
         return os.open(node.file_path, flags)
 
     def read(self, path, length, offset, fh):
-        ans=super().read(path, length, offset, fh)
-        print(ans)
+        ans = super().read(path, length, offset, fh)
+        Log('read', path, length, offset, fh, '-->', ans, level=2)
 
     def write(self, path, buf, offset, fh):
+        Log('write', path, buf, offset, fh, level=2)
         self.written = True
         return super().write(path, buf, offset, fh)
 
     def release(self, path, fh):
-        ans=super().release(path, fh)
+        Log('release', path, fh, level=2)
+        ans = super().release(path, fh)
         if self.written and self.open_file_path:
             self.call(self.plugin_name, '_write_callback', self.node_name, self.open_file_path)
         return ans
 
     def flush(self, path, fh):
+        Log('flush', path, fh, level=2)
         pass
 
 

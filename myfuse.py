@@ -157,10 +157,6 @@ class Passthrough(Operations):
         return self.flush(path, fh)
 
 
-def myfuse(operations, mountpoint, root):
-    FUSE(operations(root), mountpoint, nothreads=True, foreground=True)
-
-
 def main(mountpoint, root):
     FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)
 

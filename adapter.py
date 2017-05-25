@@ -1,67 +1,86 @@
 from myfuse import Passthrough
-from tools import Log
+from tools import *
 from fuse import FuseOSError
 import errno
 import os
+import sys
 
-ST_MODE_FILE = 33188
-ST_MODE_DIR = 16877
-ST_INO = 0
-ST_NLINK = 1
-ST_DEV = 16777220
-ST_UID = os.getuid()
-ST_GID = os.getgid()
-ST_SIZE = 0
-ST_ATIME = 0
-ST_MTIME = 0
-ST_CTIME = 0
-
-base_stat = {
+BASE_STAT = {
+    'st_atime': 0,
+    'st_ctime': 0,
+    'st_gid': os.getgid(),
     'st_mode': 0,
-    'st_ino': ST_INO,
-    'st_dev': ST_DEV,
-    'st_nlink': ST_NLINK,
-    'st_uid': ST_UID,
-    'st_gid': ST_GID,
-    'st_size': ST_SIZE,
-    'st_atime': ST_ATIME,
-    'st_ctime': ST_CTIME
+    'st_mtime': 0,
+    'st_nlink': 16777220,
+    'st_size': 100,
+    'st_uid': os.getuid(),
 }
 
-file_stat = base_stat
-file_stat['st_mode'] = ST_MODE_FILE
+FILE_STAT = BASE_STAT
+FILE_STAT['st_mode'] = 33188
 
-dir_stat = base_stat
-dir_stat['st_mode'] = ST_MODE_DIR
+DIR_STAT = BASE_STAT
+DIR_STAT['st_mode'] = 16877
 
 
 class TreeNode():
-    name = ''
-    isdir = None
-    subdir = []
-    mode = 0  # rwx
+    # static
     R = 4
     W = 2
     X = 1
     RO = 4
     WO = 2
     RW = 6
+    RWX = 7
+
+    # attribute
+    name = ''
+    isdir = None
+    subdir = {}
+    mode = 0  # rwx
+    stat = None
+    father = None
+
+    # file attribute
     file_path = None
 
     def __init__(self, name, isdir=False, mode=0):
         self.name = name
         self.isdir = isdir
         self.mode = mode
+        self.stat = DIR_STAT
 
     def add_dir(self, name):
-        dir = TreeNode(name, isdir=True, mode=0)
-        self.subdir.append(dir)
-        return dir
+        node = TreeNode(name, isdir=True, mode=TreeNode.RWX)
+        node.stat = DIR_STAT
+        node.father = self
+        self.subdir.update({node.name: node})
+        return node
 
-    def add_file(self, name, mode=0):
-        file = TreeNode(name, isdir=False, mode=mode)
-        self.subdir.append(file)
-        return file
+    def add_file(self, name, mode=0, file_path=None):
+        node = TreeNode(name, isdir=False, mode=mode)
+        node.stat = FILE_STAT
+        node.father = self
+        if file_path:
+            node.file_path = file_path
+            print(file_path)
+            print(name)
+            print(mode)
+            st = os.lstat(node.file_path)
+            stat = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+                                                            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
+                                                            'st_uid'))
+            node.stat = stat
+
+        self.subdir.update({node.name: node})
+        return node
+
+    def del_node(self, name):
+        if name in self.subdir:
+            self.subdir[name].father = None
+            self.subdir.pop(name)
+            return True
+        return False
 
     def can_read(self):
         return self.isdir or self.mode & self.R > 0
@@ -72,55 +91,41 @@ class TreeNode():
     def can_execute(self):
         return not self.isdir and self.mode & self.X > 0
 
-    def get_dir(self, name):
-        for dir in self.subdir:
-            if dir.name == name:
-                return dir
-        return None
-
     def get_node(self, t_path):
+        if t_path == '/':
+            return self
         if type(t_path) == str:
             paths = t_path.split('/')
         else:
             paths = t_path
+        if self.name != paths[0]:
+            return None
         if len(paths) <= 1:
             return self
-        if paths[0] == self.name:
-            return self.get_dir(paths[1]).get_node(paths[1:])
+        return self.subdir[paths[1]].get_node(paths[1:]) if paths[1] in self.subdir else None
 
-    def access_tree(self, list, osmode):
-        if len(list) > 0:
-            dir = self.get_dir(list[0])
-            if dir:
-                return dir.access(list[1:], osmode)
-        else:
-            if osmode == os.F_OK:
-                return True
-            elif osmode == os.R_OK:
-                return self.mode & self.R > 0
-            elif osmode == os.W_OK:
-                return self.mode & self.W > 0
-            elif osmode == os.X_OK:
-                return self.mode & self.X > 0
-        return False
-
-    def access_path(self, path, osmode):
-        paths = path.split('/')
-        if not paths[0] == self.name:
+    def access_tree(self, path, osmode):
+        node = self.get_node(path)
+        if not node:
             return False
-        return self.access_tree(paths[1:], osmode)
+        if osmode == os.F_OK:
+            return True
+        elif osmode == os.R_OK:
+            return node.mode & TreeNode.R > 0
+        elif osmode == os.W_OK:
+            return node.mode & TreeNode.W > 0
+        elif osmode == os.X_OK:
+            return node.mode & TreeNode.X > 0
+        return False
 
     def get_stat(self, paths):
         node = self.get_node(paths)
-        if node.isdir:
-            return dir_stat
-        else:
-            return file_stat
+        return node.stat if node else DIR_STAT
 
 
 class Adapter(Passthrough):
     plugins = {}
-    root = TreeNode('', isdir=True)
+    root_node = TreeNode('', isdir=True, mode=TreeNode.RWX)
 
     # Tools
 
@@ -131,16 +136,24 @@ class Adapter(Passthrough):
             plugin = t_plugin
         if not (plugin and hasattr(plugin, method)):
             return NotImplementedError()
-        getattr(plugin, method)(*args, **kwargs)
+        return getattr(plugin, method)(*args, **kwargs)
 
     def make_tree(self):
-        root = self.root
-        for botname in self.plugins.keys():
-            bot = root.add_dir(botname)
-            for plugin in self.call(bot, 'support'):
-                list = bot.add_dir(plugin)
-                list.add_file('record.txt', mode=TreeNode.RO)
-                list.add_file('dialog', mode=TreeNode.WO)
+        root = self.root_node
+        for (plugin_name, plugin) in self.plugins.items():
+            # print(plugin_name)
+            # print(plugin)
+            # print(self.call(plugin, 'support'))
+            plugin_node = root.add_dir(plugin_name)
+            for support_name in self.call(plugin, 'support'):
+                support_node = plugin_node.add_dir(support_name)
+                for name in self.call(plugin, support_name + '_list'):
+                    node = support_node.add_dir(name)
+                    print(support_name, name)
+                    node.add_file('record', mode=TreeNode.RO,
+                                  file_path=self.call(plugin, support_name + '_read_file_path', name))
+                    node.add_file('reply', mode=TreeNode.WO,
+                                  file_path=self.call(plugin, support_name + '_write_file_path', name))
 
     # FileSystem
 
@@ -149,23 +162,26 @@ class Adapter(Passthrough):
     # rm [file]: unlink
     # rm [dir]: rmdir
 
-    def __init__(self, root, plugins={}):
+    def __init__(self, root, plugins=[]):
+        super().__init__(root)
         self.plugins = {x.name: x for x in plugins}
+        # print(self.plugins)
+        # print(self.root_node)
         self.make_tree()
-        super(Passthrough, root)
 
     def access(self, path, mode):
         Log('access', path, mode, level=2)
-        return self.root.access_path(path, mode)
+        if not self.root_node.access_tree(path, mode):
+            raise FuseOSError(errno.EACCES)
 
     def getattr(self, path, fh=None):
         Log('getattr', path, fh, level=2)
-        return self.root.get_stat(path.split('/'))
+        return self.root_node.get_stat(path)
 
     def readdir(self, path, fh):
         Log('readdir', path, level=2)
         dirents = ['.', '..']
-        dirents.extend(self.root.get_node(path.split('/')))
+        dirents.extend(self.root_node.get_node(path).subdir.keys())
         for r in dirents:
             yield r
 
@@ -177,26 +193,32 @@ class Adapter(Passthrough):
 
     # File
 
-    # cat: open -> read -> flush -> release()
-    # echo "aa" > bb: getattr -> access -> open -> truncate -> write -> flush -> release
+    # read: open -> read -> flush -> release()
+    # write: access -> getattr -> open -> truncate -> write -> flush -> release
+    open_file_path = None
+    written = False
+    node_name = None
+    plugin_name = None
 
     def open(self, path, flags):
-        node = self.root.get_node(path)
+        node = self.root_node.get_node(path)
+        self.open_file_path = node.file_path
+        self.written = False
+        self.node_name = node.name
+        self.plugin_name = node.father.name
         return os.open(node.file_path, flags)
 
+    def read(self, path, length, offset, fh):
+        super(Passthrough, self).read(path, length, offset, fh)
+
     def write(self, path, buf, offset, fh):
-        pass
-        # def read(self, path, length, offset, fh):
-        #     pass
-        #
-        # def flush(self, path, fh):
-        #     pass
-        #
-        # def truncate(self, path, length, fh=None):
-        #     pass
-        #
-        # def release(self, path, fh):
-        #     pass
+        super(Passthrough, self).write(path, buf, offset, fh)
+        self.written = True
+
+    def release(self, path, fh):
+        super(Passthrough, self).release(path, fh)
+        if self.written and self.open_file_path:
+            self.call(self.plugin_name, '_write_callback', self.node_name, self.open_file_path)
 
 
 class Plugin():
@@ -205,27 +227,52 @@ class Plugin():
     def __init__(self, name):
         self.name = name
 
-    def list_friends(self):
-        return NotImplementedError()
-
-    def read_friend(self):
-        return NotImplementedError()
-
-    def write_friend(self, text):
-        return NotImplementedError()
+    def support(self):
+        return []
 
 
 class Sample(Plugin):
     def __init__(self):
-        super(Plugin, 'sample')
+        super().__init__('sample')
         pass
 
-    def list_friends(self):
+    def support(self):
+        return ['friend', 'group']
+
+    def friend_list(self):
         return ['friend' + str(x) for x in range(5)]
 
-    def read_friend(self):
-        return 'aaa\n' \
-               'bbb\n'
+    def _get_read_path(self, name):
+        return 'data/%s/record' % name
 
-    def write_friend(self, text):
-        pass
+    def _get_write_path(self, name):
+        return 'data/%s/reply' % name
+
+    def group_list(self):
+        return ['groupA', 'groupB', 'groupC']
+
+    def friend_read_file_path(self, name):
+        path = self._get_read_path(name)
+        ensure_file(path)
+        return path
+
+    def friend_write_callback(self, name, file_path):
+        with open(file_path, 'r') as f:
+            text = '\n'.join(f.readlines())
+        clear_file(file_path)
+        with open(self._get_read_path(name), 'a') as f:
+            f.write(text)
+
+    def friend_write_file_path(self, name):
+        path = self._get_write_path(name)
+        ensure_file(path)
+        return path
+
+    def group_read_file_path(self, name):
+        return self.friend_read_file_path(name)
+
+    def group_write_file_path(self, name):
+        return self.friend_write_file_path(name)
+
+    def group_write_callback(self, name, file_path):
+        return self.friend_write_callback(name, file_path)

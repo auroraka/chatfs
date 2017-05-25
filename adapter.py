@@ -50,7 +50,7 @@ class TreeNode():
         node.stat = DIR_STAT
         node.father = self
         self.subdir.update({node.name: node})
-        print('son', self.subdir, node.subdir)
+        #print('son', self.subdir, node.subdir)
         return node
 
     def add_file(self, name, mode=0, file_path=None):
@@ -59,9 +59,9 @@ class TreeNode():
         node.father = self
         if file_path:
             node.file_path = file_path
-            print(file_path)
-            print(name)
-            print(mode)
+            #print(file_path)
+            #print(name)
+            #print(mode)
             st = os.lstat(node.file_path)
             stat = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                                                             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
@@ -166,7 +166,7 @@ class Adapter(Passthrough):
                     node = support_node.add_dir(name)
                     # checkTTT()
                     # self.root_node.print_tree()
-                    print(support_name, name)
+                    # print(support_name, name)
                     node.add_file('record', mode=TreeNode.RO,
                                   file_path=self.call(plugin, support_name + '_read_file_path', name))
                     node.add_file('reply', mode=TreeNode.WO,
@@ -221,23 +221,21 @@ class Adapter(Passthrough):
 
     # read: open -> read -> flush -> release()
     # write: access -> getattr -> open -> truncate -> write -> flush -> release
-    open_file_path = None
-    written = False
-    node_name = None
-    plugin_name = None
 
     def open(self, path, flags):
         Log('open', path, flags, level=2)
         node = self.root_node.get_node(path)
         self.open_file_path = node.file_path
         self.written = False
-        self.node_name = node.name
-        self.plugin_name = node.father.name
+        self.node_name = node.father.name
+        self.plugin_name = node.father.father.father.name
+        self.support_name = node.father.father.name
         return os.open(node.file_path, flags)
 
     def read(self, path, length, offset, fh):
         ans = super().read(path, length, offset, fh)
         Log('read', path, length, offset, fh, '-->', ans, level=2)
+        return ans
 
     def write(self, path, buf, offset, fh):
         Log('write', path, buf, offset, fh, level=2)
@@ -247,12 +245,16 @@ class Adapter(Passthrough):
     def release(self, path, fh):
         Log('release', path, fh, level=2)
         ans = super().release(path, fh)
+        # Info(self.written,self.open_file_path)
         if self.written and self.open_file_path:
-            self.call(self.plugin_name, '_write_callback', self.node_name, self.open_file_path)
+            Info('write callback',path)
+            Info('record',self.plugin_name,self.support_name+'_write_callback')
+            self.call(self.plugin_name,self.support_name+'_write_callback', self.node_name, self.open_file_path)
         return ans
 
     def flush(self, path, fh):
         Log('flush', path, fh, level=2)
+        super().flush(path,fh)
         pass
 
 
@@ -294,7 +296,9 @@ class Sample(Plugin):
     def friend_write_callback(self, name, file_path):
         with open(file_path, 'r') as f:
             text = '\n'.join(f.readlines())
+        Info('write content',text)
         clear_file(file_path)
+        print(self._get_read_path(name))
         with open(self._get_read_path(name), 'a') as f:
             f.write(text)
 

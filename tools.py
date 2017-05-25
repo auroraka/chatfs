@@ -10,6 +10,8 @@ def Log(*args, **kwargs):
             return
     print(datetime.datetime.now(), *args)
 
+def Info(name,*args,**kwargs):
+    print('[',name,']',*args,**kwargs)
 
 def ensure_file(file_path):
     (path, file) = os.path.split(file_path)
@@ -17,7 +19,7 @@ def ensure_file(file_path):
         os.makedirs(path)
     if not os.path.exists(file_path):
         with open(file_path, 'w') as f:
-            f.write('This is '+file_path)
+            f.write('This is '+file_path+'\n')
             pass
 
 

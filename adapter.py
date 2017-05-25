@@ -50,7 +50,7 @@ class TreeNode():
         node.stat = DIR_STAT
         node.father = self
         self.subdir.update({node.name: node})
-        #print('son', self.subdir, node.subdir)
+        # print('son', self.subdir, node.subdir)
         return node
 
     def add_file(self, name, mode=0, file_path=None):
@@ -59,9 +59,9 @@ class TreeNode():
         node.father = self
         if file_path:
             node.file_path = file_path
-            #print(file_path)
-            #print(name)
-            #print(mode)
+            # print(file_path)
+            # print(name)
+            # print(mode)
             st = os.lstat(node.file_path)
             stat = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                                                             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
@@ -116,8 +116,8 @@ class TreeNode():
 
     def get_stat(self, paths):
         node = self.get_node(paths)
-        return node.stat if node else None
-        # return node.stat if node else DIR_STAT
+        # return node.stat if node else None
+        return node.stat if node else DIR_STAT
 
     def print_tree(self, indent=0):
         if indent > 5:
@@ -247,22 +247,20 @@ class Adapter(Passthrough):
         ans = super().release(path, fh)
         # Info(self.written,self.open_file_path)
         if self.written and self.open_file_path:
-            Info('write callback',path)
-            Info('record',self.plugin_name,self.support_name+'_write_callback')
-            self.call(self.plugin_name,self.support_name+'_write_callback', self.node_name, self.open_file_path)
+            Info('write callback', path)
+            Info('record', self.plugin_name, self.support_name + '_write_callback')
+            self.call(self.plugin_name, self.support_name + '_write_callback', self.node_name, self.open_file_path)
         return ans
 
     def flush(self, path, fh):
         Log('flush', path, fh, level=2)
-        super().flush(path,fh)
+        super().flush(path, fh)
         pass
 
 
 class Plugin():
-    name = 'noname'
-
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
+        self.name = 'noname'
 
     def support(self):
         return []
@@ -270,7 +268,8 @@ class Plugin():
 
 class Sample(Plugin):
     def __init__(self):
-        super().__init__('sample')
+        super().__init__()
+        self.name = 'sample'
         pass
 
     def support(self):
@@ -296,9 +295,9 @@ class Sample(Plugin):
     def friend_write_callback(self, name, file_path):
         with open(file_path, 'r') as f:
             text = '\n'.join(f.readlines())
-        Info('write content',text)
+        Info('write content', text)
         clear_file(file_path)
-        print(self._get_read_path(name))
+        # print(self._get_read_path(name))
         with open(self._get_read_path(name), 'a') as f:
             f.write(text)
 

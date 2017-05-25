@@ -33,28 +33,24 @@ class TreeNode():
     RW = 6
     RWX = 7
 
-    # attribute
-    name = ''
-    isdir = None
-    subdir = {}
-    mode = 0  # rwx
-    stat = None
-    father = None
-
-    # file attribute
-    file_path = None
-
     def __init__(self, name, isdir=False, mode=0):
+        # attribute
         self.name = name
         self.isdir = isdir
         self.mode = mode
         self.stat = DIR_STAT
+        self.subdir={}
+        self.father=None
+
+        # file attribute
+        self.file_path = None
 
     def add_dir(self, name):
         node = TreeNode(name, isdir=True, mode=TreeNode.RWX)
         node.stat = DIR_STAT
         node.father = self
-        self.subdir.update({node.name: node})
+        self.subdir.update({node.name:node})
+        print('son',self.subdir,node.subdir)
         return node
 
     def add_file(self, name, mode=0, file_path=None):
@@ -120,12 +116,13 @@ class TreeNode():
 
     def get_stat(self, paths):
         node = self.get_node(paths)
-        return node.stat if node else DIR_STAT
+        return node.stat if node else None
+        #return node.stat if node else DIR_STAT
 
     def print_tree(self, indent=0):
         if indent > 5:
             return
-        print(''.join([' '] * indent) + self.name + '\n')
+        print(''.join([' '] * indent) + self.name,self)
         for (name, node) in self.subdir.items():
             node.print_tree(indent + 1)
 
@@ -136,7 +133,7 @@ TTT = 0
 def checkTTT():
     global TTT
     TTT += 1
-    if TTT > 10:
+    if TTT >=2:
         sys.exit(0)
 
 
@@ -156,29 +153,32 @@ class Adapter(Passthrough):
         return getattr(plugin, method)(*args, **kwargs)
 
     def make_tree(self):
-        root = self.root_node
         for (plugin_name, plugin) in self.plugins.items():
             # print(plugin_name)
             # print(plugin)
             # print(self.call(plugin, 'support'))
-            plugin_node = root.add_dir(plugin_name)
+            plugin_node = self.root_node.add_dir(plugin_name)
             for support_name in self.call(plugin, 'support'):
                 support_node = plugin_node.add_dir(support_name)
-                checkTTT()
-                self.root_node.print_tree()
+                #checkTTT()
+                #self.root_node.print_tree()
                 for name in self.call(plugin, support_name + '_list'):
                     node = support_node.add_dir(name)
-                    checkTTT()
-                    self.root_node.print_tree()
+                    #checkTTT()
+                    #self.root_node.print_tree()
                     print(support_name, name)
                     node.add_file('record', mode=TreeNode.RO,
                                   file_path=self.call(plugin, support_name + '_read_file_path', name))
                     node.add_file('reply', mode=TreeNode.WO,
                                   file_path=self.call(plugin, support_name + '_write_file_path', name))
-                    checkTTT()
-                    self.root_node.print_tree()
-        sys.exit(0)
-        self.root_node.print_tree()
+                    #checkTTT()
+                    #self.root_node.print_tree()
+        #print(self.root_node)
+        #print(self.root_node.subdir)
+        #print(self.root_node.subdir['sample'].subdir)
+        #self.root_node.print_tree()
+        #sys.exit(0)
+        #self.root_node.print_tree()
 
     # FileSystem
 

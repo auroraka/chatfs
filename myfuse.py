@@ -27,7 +27,7 @@ class Passthrough(Operations):
     # ==================
 
     def access(self, path, mode):
-        Log('access', path, level=1)
+        Log('access', path, mode, level=1)
         full_path = self._full_path(path)
         if not os.access(full_path, mode):
             raise FuseOSError(errno.EACCES)
@@ -43,7 +43,7 @@ class Passthrough(Operations):
         return os.chown(full_path, uid, gid)
 
     def getattr(self, path, fh=None):
-        Log('getattr', path, level=1)
+        Log('getattr', path, fh, level=1)
         full_path = self._full_path(path)
         st = os.lstat(full_path)  # os.stat follow the symbol link while os.lstat not
         return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',

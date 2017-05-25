@@ -131,8 +131,8 @@ def deal_command(msg):
                 save_commands()
                 return 'delete %s from in list' % args[1]
         return 'no key is match'
-    elif args[0] == '\\list':
-        if len(start_list) + len(end_list) + len(in_list) > 10:
+    elif args[0] == '\\list' or args[0] == '\\_listall':
+        if args[0] == '\\list' and len(start_list) + len(end_list) + len(in_list) > 10:
             return '太多了显示部分\n' \
                    '[start list]\n' \
                    '%s\n' \
@@ -163,6 +163,7 @@ def deal_command(msg):
                '\\in [words_from] [words_to]\n' \
                '\\delete [key]\n' \
                '\\list\n' \
+               '\\_listall\n' \
                '\\show [key|value]\n' \
                '\\help'
     return random.choice(['不懂', '听不懂', '你说啥'])

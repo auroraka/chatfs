@@ -122,6 +122,11 @@ class TreeNode():
         node = self.get_node(paths)
         return node.stat if node else DIR_STAT
 
+    def print_tree(self, indent=0):
+        print(''.join([' '] * indent) + self.name + '\n')
+        for (name, node) in self.subdir.items():
+            node.print_tree(indent + 1)
+
 
 class Adapter(Passthrough):
     plugins = {}
@@ -154,6 +159,8 @@ class Adapter(Passthrough):
                                   file_path=self.call(plugin, support_name + '_read_file_path', name))
                     node.add_file('reply', mode=TreeNode.WO,
                                   file_path=self.call(plugin, support_name + '_write_file_path', name))
+        self.root_node.print_tree()
+        sys.exit(0)
 
     # FileSystem
 

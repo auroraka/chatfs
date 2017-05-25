@@ -200,8 +200,9 @@ class Adapter(Passthrough):
             raise FuseOSError(errno.EACCES)
 
     def getattr(self, path, fh=None):
-        Log('getattr', path, fh, level=2)
-        return self.root_node.get_stat(path)
+        ans= self.root_node.get_stat(path)
+        Log('getattr', path, fh,'-->',ans, level=2)
+        return ans
 
     def readdir(self, path, fh):
         Log('readdir', path, level=2)

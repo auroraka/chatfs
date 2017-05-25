@@ -11,7 +11,7 @@ BASE_STAT = {
     'st_gid': os.getgid(),
     'st_mode': 0,
     'st_mtime': 0,
-    'st_nlink': 16777220,
+    'st_nlink': 1,
     'st_size': 100,
     'st_uid': os.getuid(),
 }
@@ -39,8 +39,8 @@ class TreeNode():
         self.isdir = isdir
         self.mode = mode
         self.stat = DIR_STAT
-        self.subdir={}
-        self.father=None
+        self.subdir = {}
+        self.father = None
 
         # file attribute
         self.file_path = None
@@ -49,8 +49,8 @@ class TreeNode():
         node = TreeNode(name, isdir=True, mode=TreeNode.RWX)
         node.stat = DIR_STAT
         node.father = self
-        self.subdir.update({node.name:node})
-        print('son',self.subdir,node.subdir)
+        self.subdir.update({node.name: node})
+        print('son', self.subdir, node.subdir)
         return node
 
     def add_file(self, name, mode=0, file_path=None):
@@ -117,12 +117,12 @@ class TreeNode():
     def get_stat(self, paths):
         node = self.get_node(paths)
         return node.stat if node else None
-        #return node.stat if node else DIR_STAT
+        # return node.stat if node else DIR_STAT
 
     def print_tree(self, indent=0):
         if indent > 5:
             return
-        print(''.join([' '] * indent) + self.name,self)
+        print(''.join([' '] * indent) + self.name, self)
         for (name, node) in self.subdir.items():
             node.print_tree(indent + 1)
 
@@ -133,7 +133,7 @@ TTT = 0
 def checkTTT():
     global TTT
     TTT += 1
-    if TTT >=2:
+    if TTT >= 2:
         sys.exit(0)
 
 
@@ -160,25 +160,25 @@ class Adapter(Passthrough):
             plugin_node = self.root_node.add_dir(plugin_name)
             for support_name in self.call(plugin, 'support'):
                 support_node = plugin_node.add_dir(support_name)
-                #checkTTT()
-                #self.root_node.print_tree()
+                # checkTTT()
+                # self.root_node.print_tree()
                 for name in self.call(plugin, support_name + '_list'):
                     node = support_node.add_dir(name)
-                    #checkTTT()
-                    #self.root_node.print_tree()
+                    # checkTTT()
+                    # self.root_node.print_tree()
                     print(support_name, name)
                     node.add_file('record', mode=TreeNode.RO,
                                   file_path=self.call(plugin, support_name + '_read_file_path', name))
                     node.add_file('reply', mode=TreeNode.WO,
                                   file_path=self.call(plugin, support_name + '_write_file_path', name))
-                    #checkTTT()
-                    #self.root_node.print_tree()
-        #print(self.root_node)
-        #print(self.root_node.subdir)
-        #print(self.root_node.subdir['sample'].subdir)
-        #self.root_node.print_tree()
-        #sys.exit(0)
-        #self.root_node.print_tree()
+                    # checkTTT()
+                    # self.root_node.print_tree()
+                    # print(self.root_node)
+                    # print(self.root_node.subdir)
+                    # print(self.root_node.subdir['sample'].subdir)
+                    # self.root_node.print_tree()
+                    # sys.exit(0)
+                    # self.root_node.print_tree()
 
     # FileSystem
 
@@ -200,8 +200,8 @@ class Adapter(Passthrough):
             raise FuseOSError(errno.EACCES)
 
     def getattr(self, path, fh=None):
-        ans= self.root_node.get_stat(path)
-        Log('getattr', path, fh,'-->',ans, level=2)
+        ans = self.root_node.get_stat(path)
+        Log('getattr', path, fh, '-->', ans, level=2)
         return ans
 
     def readdir(self, path, fh):
@@ -235,16 +235,19 @@ class Adapter(Passthrough):
         return os.open(node.file_path, flags)
 
     def read(self, path, length, offset, fh):
-        super(Passthrough, self).read(path, length, offset, fh)
+        super().read(path, length, offset, fh)
 
     def write(self, path, buf, offset, fh):
-        super(Passthrough, self).write(path, buf, offset, fh)
+        super().write(path, buf, offset, fh)
         self.written = True
 
     def release(self, path, fh):
-        super(Passthrough, self).release(path, fh)
+        super().release(path, fh)
         if self.written and self.open_file_path:
             self.call(self.plugin_name, '_write_callback', self.node_name, self.open_file_path)
+
+    def flush(self, path, fh):
+        pass
 
 
 class Plugin():

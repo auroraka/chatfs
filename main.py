@@ -9,6 +9,6 @@ def adapter_fuse(mountpoint, root):
 
 
 if __name__ == '__main__':
-    mirror_fuse(sys.argv[2], sys.argv[1])
+    #mirror_fuse(sys.argv[2], sys.argv[1])
 
-    #adapter_fuse(sys.argv[2], sys.argv[1])
+    adapter_fuse(sys.argv[2], sys.argv[1])

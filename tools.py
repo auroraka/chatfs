@@ -17,6 +17,7 @@ def ensure_file(file_path):
         os.makedirs(path)
     if not os.path.exists(file_path):
         with open(file_path, 'w') as f:
+            f.write('This is '+file_path)
             pass
 
 

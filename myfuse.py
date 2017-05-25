@@ -43,12 +43,12 @@ class Passthrough(Operations):
         return os.chown(full_path, uid, gid)
 
     def getattr(self, path, fh=None):
+        Log('getattr', path, fh,level=1)
         full_path = self._full_path(path)
         st = os.lstat(full_path)  # os.stat follow the symbol link while os.lstat not
         ans=dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                                                         'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
                                                         'st_uid'))
-        Log('getattr', path, fh, '-->',ans,level=1)
         return ans
 
     def readdir(self, path, fh):

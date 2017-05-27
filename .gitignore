@@ -4,3 +4,5 @@
 __pycache__/
 wxpy.pkl
 data/**
+save/tmp
+fusedata/**

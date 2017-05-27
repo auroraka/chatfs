@@ -1,5 +1,6 @@
-from adapter import Plugin, Sample
 from wxpy import *
+
+from old.adapter import Sample
 from tools import *
 
 

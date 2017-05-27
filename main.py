@@ -1,8 +1,9 @@
-from adapter import Adapter, Sample
-from wxfs import WechatFS
-from myfuse import main as mirror_fuse
-from fuse import FUSE
 import sys
+
+from fuse import FUSE
+
+from old.adapter import Adapter, Sample
+from old.wxfs import WechatFS
 
 
 def adapter_fuse(mountpoint, root):

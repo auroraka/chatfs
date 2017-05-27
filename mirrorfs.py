@@ -10,7 +10,7 @@ from fuse import FUSE, FuseOSError, Operations
 from tools import Log
 
 
-class Passthrough(Operations):
+class MirrorFS(Operations):
     def __init__(self, root):
         self.root = root
 
@@ -43,12 +43,12 @@ class Passthrough(Operations):
         return os.chown(full_path, uid, gid)
 
     def getattr(self, path, fh=None):
-        Log('getattr', path, fh,level=1)
+        Log('getattr', path, fh, level=1)
         full_path = self._full_path(path)
         st = os.lstat(full_path)  # os.stat follow the symbol link while os.lstat not
-        ans=dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-                                                        'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
-                                                        'st_uid'))
+        ans = dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+                                                       'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
+                                                       'st_uid'))
         return ans
 
     def readdir(self, path, fh):
@@ -159,7 +159,7 @@ class Passthrough(Operations):
 
 
 def main(mountpoint, root):
-    FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)
+    FUSE(MirrorFS(root), mountpoint, nothreads=True, foreground=True)
 
 
 if __name__ == '__main__':

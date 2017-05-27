@@ -1,4 +1,4 @@
-#### Install
+## Install
 
 install python3
 install python3-pip
@@ -7,6 +7,7 @@ then
 > pip install -r requirements.txt
 
 
+## File System
 
 #### MirrorFS
 
@@ -32,6 +33,7 @@ show old messsage
 
 
 
+## Bot
 
 #### Wechat Bot
 
@@ -45,6 +47,6 @@ A Funny QQ Bot
 > python3 qq_bot.py
 
 
-#### reference
+## Reference
 - wechat: http://wxpy.readthedocs.io/zh/latest/
 - qq : https://github.com/pandolia/qqbot

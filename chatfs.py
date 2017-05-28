@@ -58,4 +58,5 @@ class ChatFS(MirrorFS):
 
 if __name__ == '__main__':
     mountpoint = sys.argv[1]
-    ChatFS(mountpoint, plugins=[Sample(), WechatPlugin(), QQPlugin()])
+    ChatFS(mountpoint, plugins=[Sample(), WechatPlugin()])
+    #ChatFS(mountpoint, plugins=[Sample(), WechatPlugin(), QQPlugin()])

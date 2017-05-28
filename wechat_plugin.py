@@ -49,18 +49,27 @@ def wechat_timer(root_node, bot):
             elif type(m.chat) == Group:
                 fg = root_node.subdir['groups']
             if fg:
-                # print(m.receiver, m.sender)
-                # print(fg.subdir.keys())
-                for (name, n) in fg.subdir.items():
-                    if name == m.receiver.name or name == m.sender.name:
-                        # print(n.subdir['record'].full_path())
-                        with open(n.subdir['record'].full_path(), 'a') as f:
-                            # with open(n.subdir['record'].fuse_path(), 'a') as f:
-                            text = '[%s]  %s -> %s\n%s\n\n' % (
-                                str(datetime.datetime.now()), m.sender.name, m.receiver.name, m.text)
-                            f.write(text)
-                            # print(text)
-                            f.flush()
+                if m.type in ['Text', 'Sharing']:
+                    # print(m.receiver, m.sender)
+                    # print(fg.subdir.keys())
+                    for (name, n) in fg.subdir.items():
+                        if name == m.receiver.name or name == m.sender.name:
+                            # print(n.subdir['record'].full_path())
+                            with open(n.subdir['record'].full_path(), 'a') as f:
+                                # with open(n.subdir['record'].fuse_path(), 'a') as f:
+                                text = '[%s]  %s -> %s\n%s\n\n' % (
+                                    str(datetime.datetime.now()), m.sender.name, m.receiver.name, m.text)
+                                f.write(text)
+                                # print(text)
+                                f.flush()
+                elif m.type in ['Picture', 'Attachment', 'Recording']:
+                    if m.sender.name in fg.subdir:
+                        node = fg.subdir[m.sender.name].subdir['receive']
+                        file_path = os.path.join(node.full_path(), m.file_name)
+                        if not os.path.exists(file_path):
+                            with open(file_path, 'wb') as f:
+                                f.write(m.get_file())
+                                print('receive file [%s] from %s' % (m.sender.name, m.file_name))
 
 
 def wechat_write_callback(node, text):
@@ -91,6 +100,7 @@ class WechatPlugin(Plugin):
             fr = friends.add_dir(f.name)
             fr.add_file('record')
             fr.add_file('reply', is_write_node=True, write_callback=wechat_write_callback, attach=f)
+            fr.add_dir('receive')
 
         for f in self.bot.groups():
             if not f.name:
@@ -98,5 +108,6 @@ class WechatPlugin(Plugin):
             fr = groups.add_dir(f.name)
             fr.add_file('record')
             fr.add_file('reply', is_write_node=True, write_callback=wechat_write_callback, attach=f)
+            fr.add_dir('receive')
         t = Thread(target=wechat_timer, args=[self.root_node, self.bot])
         t.start()

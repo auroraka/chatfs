@@ -5,8 +5,8 @@ from tree import TreeNode
 import os
 import sys
 from plugin import Sample
-#from wechat_plugin import WechatPlugin
-#from qq_plugin import QQPlugin
+from wechat_plugin import WechatPlugin
+from qq_plugin import QQPlugin
 from tg_plugin import TelegramPlugin
 import shutil
 
@@ -59,6 +59,6 @@ class ChatFS(MirrorFS):
 
 if __name__ == '__main__':
     mountpoint = sys.argv[1]
-    ChatFS(mountpoint, plugins=[Sample(), TelegramPlugin()])
-    #ChatFS(mountpoint, plugins=[Sample(), WechatPlugin()])
-    #ChatFS(mountpoint, plugins=[Sample(), WechatPlugin(), QQPlugin()])
+    ChatFS(mountpoint, plugins=[Sample(), WechatPlugin()])
+    # ChatFS(mountpoint, plugins=[Sample(), TelegramPlugin(), WechatPlugin(), QQPlugin()])
+    # ChatFS(mountpoint, plugins=[Sample(), WechatPlugin(), QQPlugin()])

@@ -7,11 +7,14 @@ from plugin import Plugin
 import subprocess
 from pytg.utils import coroutine
 
+TG_CLI_PATH = "/Users/ytl/YTL/App/telegram/bin/telegram-cli"
+TG_PUBKEY_FILE = "/Users/ytl/YTL/App/telegram/server.pub"
+
 global root_node
 root_node = None
 
 global tg
-tg = Telegram(telegram="/Users/Blink/PycharmProject/tg/bin/telegram-cli", pubkey_file="/Users/Blink/PycharmProject/tg/server.pub")
+tg = Telegram(telegram=TG_CLI_PATH, pubkey_file=TG_PUBKEY_FILE)
 
 global sender
 sender = tg.sender
@@ -24,6 +27,7 @@ friends = []
 
 global groups
 groups = []
+
 
 @coroutine
 def receive_loop():
@@ -42,7 +46,7 @@ def receive_loop():
                 continue
             print('received msg')
             for (name, n) in fg.subdir.items():
-                print(n.subdir['reply'].attach)
+                # print(n.subdir['reply'].attach)
                 if n.subdir['reply'].attach == rid:
                     with open(n.subdir['record'].full_path(), 'a') as f:
                         sender_name = msg['sender']['first_name'] + ' ' + msg['sender']['last_name']
@@ -51,7 +55,7 @@ def receive_loop():
                             receiver_name = msg['receiver']['title']
                         # with open(n.subdir['record'].fuse_path(), 'a') as f:
                         text = '[%s]  %s -> %s\n%s\n\n' % (
-                            str(datetime.datetime.now()), sender_name , receiver_name, msg['text'])
+                            str(datetime.datetime.now()), sender_name, receiver_name, msg['text'])
                         f.write(text)
                         # print(text)
                         f.flush()
@@ -62,11 +66,13 @@ def tg_timer(root_node):
     receiver.start()
     receiver.message(receive_loop())
 
+
 def tg_write_callback(node, text):
     print(node)
     print(node.attach)
     id = node.attach
     sender.send_msg(id, text)
+
 
 class TelegramPlugin(Plugin):
     def __init__(self):
@@ -105,6 +111,3 @@ class TelegramPlugin(Plugin):
                 groups.append(f['id'])
         t = Thread(target=tg_timer, args=[self.root_node])
         t.start()
-
-
-

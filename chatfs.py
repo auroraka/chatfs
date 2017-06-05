@@ -48,7 +48,7 @@ class ChatFS(MirrorFS):
         if path in self.file_state and self.file_state[path] == 'write' and node and node.is_write_node:
             fuse_path = os.path.join(self.fuse_dir, path.lstrip('/'))
             with open(fuse_path, 'r') as f:
-                text = '\n'.join(f.readlines())
+                text = '\n'.join(f.readlines()).rstrip('\n')
             node.write_callback(node, text)
             with open(fuse_path, 'w') as f:
                 pass

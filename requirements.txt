@@ -3,3 +3,4 @@ pytimeparse==1.1.6
 fusepy==2.0.4
 qqbot==2.2.14
 thread==0.1.0
+pytg

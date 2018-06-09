@@ -13,6 +13,8 @@ in_list = {}
 SHUT_UP_UTLL = None  # 沉默时间
 
 
+nick_name = ['元首']
+
 def save_commands():
     with open('save/start_list.txt', 'w') as f:
         json.dump(start_list, f)
@@ -21,6 +23,17 @@ def save_commands():
     with open('save/in_list.txt', 'w') as f:
         json.dump(in_list, f)
 
+def print_commands():
+    print('load_commands:')
+    print('start_list:')
+    for k,v in start_list.items():
+        print('\t',k,'=>',v)
+    print('end_list:')
+    for k,v in end_list.items():
+        print('\t',k,'=>',v)
+    print('in_list:')
+    for k,v in in_list.items():
+        print('\t',k,'=>',v)
 
 def load_commands():
     global start_list
@@ -33,9 +46,8 @@ def load_commands():
     with open('save/in_list.txt', 'r') as f:
         in_list = json.load(f)
 
-
 load_commands()
-
+print_commands()
 
 def msg2text(msg):
     if type(msg) != str:
@@ -43,21 +55,49 @@ def msg2text(msg):
     else:
         text = msg
     if text.startswith('@'):
+        for name in nick_name:
+            text=text.replace('@'+name,'[@ME]')
+            return text
         if '\u2005' in text:
             text = text.split('\u2005')[1]
         elif ' ' in text:
             text = ' '.join(text.split(' ')[1:])
     return text
 
+def get_h_m_s(secs):
+    r = secs
+    h,r = r//3600,r%3600
+    m,r = r//60,r%60
+    s=r
+    return h,m,s
+
+last_report = datetime.datetime.now()-datetime.timedelta(minutes=30)
+
+def report():
+    now = datetime.datetime.now()
+    last_report = now
+    ddl = datetime.datetime(year=2018,month=6,day=11)
+    d = ddl - now
+    print('secs remain',d.days*3600*24+d.seconds)
+    h,m,s = get_h_m_s(d.days*3600*24+d.seconds)
+    return '距离论文查重ddl还剩 {}小时 {}分 {}秒, 加油哦'.format(h,m,s)
+
+def check_report():
+    now = datetime.datetime.now()
+    if (now-last_report).seconds>3600:
+        return report()
 
 def auto_reply(text):
     print('[text]', text)
+    if text.startswith('给大家打个招呼'):
+        return '老子回来了!'
     if text.startswith('说'):
         return text[1:]
     elif text.startswith('傻'):
         return '傻儿子,爸爸爱你'
-    elif text.startswith('time') or text.startswith('时间'):
-        return str(datetime.datetime.now())
+    elif 'time' in text or '时间' in text:
+        return report()
+
     elif text.startswith('住口') or text.startswith('住嘴') or text.startswith('闭嘴') or text.startswith('聒噪'):
         if ' ' in text:
             text = ' '.join(text.split(' ')[1:])
@@ -74,7 +114,7 @@ def auto_reply(text):
             print('[set shut up time]', secs, SHUT_UP_UTLL)
         return '好'
     else:
-        return None
+        return check_in_list(text)
 
 
 #
@@ -120,6 +160,7 @@ def deal_command(text):
         return None
 
     text = msg2text(text)
+    print('[text]',text)
     args = text.split(' ')
     print(len(args), args[0])
     if args[0] == '\\begin':

@@ -13,6 +13,8 @@ global bot
 bot = None
 
 
+my_qq = '1048003868'
+
 @qqbotslot
 def onQQMessage(_bot, contact, member, content):
     global bot
@@ -29,17 +31,24 @@ def onQQMessage(_bot, contact, member, content):
 
 @qqbotslot
 def onQQMessage(bot, contact, member, content):
+    print('=======>')
     print('[origin]', content)
     print('[member]', member, member.name, member.qq)
     print('[contact]', contact, contact.ctype)
     if contact.ctype != 'group':
         print('[ not group ]')
         return
-    if member and member.name == 'uin3338864614':
+    if member and member.name == 'uin'+my_qq:
         print('[ it\'s me ]')
         return
     text = msg2text(content)
+    report = check_report()
+    if report:
+        bot.SendTo(contact, report)
+        return
+
     res = deal_command(text)
+    print('[text]',text,'[res]',res)
     if res:
         bot.SendTo(contact, res)
         return
@@ -55,6 +64,7 @@ def onQQMessage(bot, contact, member, content):
         return
 
     if text.startswith('[@ME] '):
+        print('[special] @ME')
         text = ' '.join(text.split(' ')[1:]).lstrip(' ')
         print(text)
         res = auto_reply(text)
@@ -62,7 +72,7 @@ def onQQMessage(bot, contact, member, content):
             bot.SendTo(contact, res)
             return
         else:
-            bot.SendTo(contact, '听不懂')
+            bot.SendTo(contact, random.choice(['不懂', '听不懂', '你说啥','啥几把玩意儿','我可去你的吧']))
             return
 
 
@@ -94,6 +104,12 @@ def time_call(bot, tl):
         bot.SendTo(tl, str(datetime.datetime.now()))
 
 
+def test():
+    bot = QQBot()
+    bot.Login(qq=my_qq)
+    bot.Run()
+    # embed()
+
 if __name__ == '__main__':
     # RunBot()
     # x = QConf()
@@ -101,12 +117,12 @@ if __name__ == '__main__':
     # sys.exit(0)
 
     bot = QQBot()
-    bot.Login(qq='505498794')
-    tl = bot.List('buddy', '天龙')[0]
+    bot.Login(qq=my_qq)
+    #tl = bot.List('buddy', '天龙')[0]
     # t = Thread(target=time_call, args=[bot, tl])
     # t.start()
 
     # tl = search_friend(bot, '天龙')
     # hzc = search_friend(bot, '胡泽聪')
     bot.Run()
-    # embed()
+    #embed()

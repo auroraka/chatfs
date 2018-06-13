@@ -42,12 +42,12 @@ def onQQMessage(bot, contact, member, content):
         print('[ it\'s me ]')
         return
     text = msg2text(content)
-    report = check_report()
-    if report:
-        bot.SendTo(contact, report)
-        return
+    #report = check_report()
+    #if report:
+    #    bot.SendTo(contact, report)
+    #    return
 
-    res = deal_command(text)
+    res = deal_command(text,member)
     print('[text]',text,'[res]',res)
     if res:
         bot.SendTo(contact, res)
@@ -67,12 +67,12 @@ def onQQMessage(bot, contact, member, content):
         print('[special] @ME')
         text = ' '.join(text.split(' ')[1:]).lstrip(' ')
         print(text)
-        res = auto_reply(text)
+        res = auto_reply(text,member)
         if res:
             bot.SendTo(contact, res)
             return
         else:
-            bot.SendTo(contact, random.choice(['不懂', '听不懂', '你说啥','啥几把玩意儿','我可去你的吧']))
+            bot.SendTo(contact, random.choice(['不懂', '听不懂', '你说啥','不知道你在说啥','你说得很对，但是我听不懂']))
             return
 
 

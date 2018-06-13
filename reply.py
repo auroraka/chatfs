@@ -2,6 +2,8 @@ import json
 import datetime
 import random
 from pytimeparse.timeparse import timeparse
+from dateutil import parser
+from bson import json_util
 
 global start_list
 global end_list
@@ -10,6 +12,8 @@ global SHUT_UP_UTLL
 start_list = {}
 end_list = {}
 in_list = {}
+time_list = {}
+name_list = {}
 SHUT_UP_UTLL = None  # 沉默时间
 
 
@@ -22,6 +26,10 @@ def save_commands():
         json.dump(end_list, f)
     with open('save/in_list.txt', 'w') as f:
         json.dump(in_list, f)
+    with open('save/time_list.txt', 'w') as f:
+        json.dump(time_list, f,default=json_util.default)
+    with open('save/name_list.txt', 'w') as f:
+        json.dump(name_list, f)
 
 def print_commands():
     print('load_commands:')
@@ -34,17 +42,28 @@ def print_commands():
     print('in_list:')
     for k,v in in_list.items():
         print('\t',k,'=>',v)
-
+    print('name_list:')
+    for k,v in name_list.items():
+        print('\t',k,'=>',v)
+    print('time_list:')
+    for k,v in time_list.items():
+        print('\t',k,'=>',v)
 def load_commands():
     global start_list
     global end_list
     global in_list
+    global name_list
+    global time_list
     with open('save/start_list.txt', 'r') as f:
         start_list = json.load(f)
     with open('save/end_list.txt', 'r') as f:
         end_list = json.load(f)
     with open('save/in_list.txt', 'r') as f:
         in_list = json.load(f)
+    with open('save/time_list.txt', 'r') as f:
+        time_list = json.load(f,object_hook=json_util.object_hook)
+    with open('save/name_list.txt', 'r') as f:
+        name_list = json.load(f)
 
 load_commands()
 print_commands()
@@ -73,21 +92,32 @@ def get_h_m_s(secs):
 
 last_report = datetime.datetime.now()-datetime.timedelta(minutes=30)
 
-def report():
+def report(m=None):
+    #member = {
+    #    'uin1344189666':'黄豪硕',
+    #    'uin1158312487':'杨天龙',
+    #    'uin3177575377':'胡泽聪',
+    #    'uin3285230888':'苏克'
+    #}
+    name = name_list[m.name] if m.name in name_list else m.name
+    ddl = time_list.get(m.name,None)
+    if not ddl:
+        return '不好意思,没有{}的记录'.format(name)
+    ddl = ddl.replace(tzinfo=None)
+    global last_report
     now = datetime.datetime.now()
     last_report = now
-    ddl = datetime.datetime(year=2018,month=6,day=11)
     d = ddl - now
     print('secs remain',d.days*3600*24+d.seconds)
     h,m,s = get_h_m_s(d.days*3600*24+d.seconds)
-    return '距离论文查重ddl还剩 {}小时 {}分 {}秒, 加油哦'.format(h,m,s)
+    return '你好,{}, 距离你的论文答辩还剩 {}小时 {}分 {}秒'.format(name,h,m,s)
 
 def check_report():
     now = datetime.datetime.now()
     if (now-last_report).seconds>3600:
         return report()
 
-def auto_reply(text):
+def auto_reply(text,m=None):
     print('[text]', text)
     if text.startswith('给大家打个招呼'):
         return '老子回来了!'
@@ -95,10 +125,10 @@ def auto_reply(text):
         return text[1:]
     elif text.startswith('傻'):
         return '傻儿子,爸爸爱你'
-    elif 'time' in text or '时间' in text:
-        return report()
+    elif 'time' in text or '时间' in text or 'ddl' in text:
+        return report(m)
 
-    elif text.startswith('住口') or text.startswith('住嘴') or text.startswith('闭嘴') or text.startswith('聒噪'):
+    elif text.startswith('住口') or text.startswith('住嘴') or text.startswith('闭嘴') or text.startswith('聒噪') or text.startswith('shutup'):
         if ' ' in text:
             text = ' '.join(text.split(' ')[1:])
         else:
@@ -147,7 +177,7 @@ def auto_reply(text):
 #         # return '听不懂'
 
 
-def random_get(dic, number=2):
+def random_get(dic, number=5):
     if len(dic) < number:
         return ''
     else:
@@ -155,7 +185,7 @@ def random_get(dic, number=2):
         return str({k: dic[k] for k in ks})
 
 
-def deal_command(text):
+def deal_command(text,member=None):
     if not text.startswith('\\'):
         return None
 
@@ -163,6 +193,16 @@ def deal_command(text):
     print('[text]',text)
     args = text.split(' ')
     print(len(args), args[0])
+    if args[0] == '\\register':
+        name_list[member.name]=args[1]
+        save_commands()
+        return '注册用户{}为{} 成功'.format(member.name,args[1])
+    if args[0] == '\\ddl':
+        cmd = ' '.join(args[1:])
+        t = parser.parse(cmd)
+        time_list[member.name]=t
+        save_commands()
+        return 'done'
     if args[0] == '\\begin':
         if args[1]:
             start_list[args[1]] = ' '.join(args[2:])
@@ -198,7 +238,7 @@ def deal_command(text):
                 save_commands()
                 return 'delete %s from in list' % args[1]
         return 'no key is match'
-    elif args[0] == '\\list' or args[0] == '\\_listall':
+    elif args[0] == '\\list' or args[0] == '\\listall':
         if args[0] == '\\list' and len(start_list) + len(end_list) + len(in_list) > 10:
             return '太多了显示部分\n' \
                    '[start list]\n' \
@@ -234,6 +274,8 @@ def deal_command(text):
                '\\list\n' \
                '\\show [key|value]\n' \
                '\\time\n' \
+               '\\register [name] (register your nick name)\n' \
+               '\\ddl [time] (register your ddl)\n' \
                '\\help'
         # '\\_listall\n' \
     return random.choice(['不懂', '听不懂', '你说啥'])

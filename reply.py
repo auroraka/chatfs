@@ -121,9 +121,9 @@ def report(m=None):
     print('secs remain',d.days*3600*24+d.seconds)
     h,m,s = get_h_m_s(d.days*3600*24+d.seconds)
     if finish:
-        return '你好,{}, 距离你的{}已过去 {}小时 {}分 {}秒,可喜可贺'.format(name,work,h,m,s)
+        return '你好,{}, 距离你{}已过去 {}小时 {}分 {}秒,可喜可贺'.format(name,work,h,m,s)
     else:
-        return '你好,{}, 距离你的{}还剩 {}小时 {}分 {}秒'.format(name,work,h,m,s)
+        return '你好,{}, 距离你{}还剩 {}小时 {}分 {}秒'.format(name,work,h,m,s)
 
 def check_report():
     now = datetime.datetime.now()

@@ -1,8 +1,9 @@
 #!/bin/bash
-if [[ $(ps -a | grep qq_bot | wc -l) -eq "2" ]];then
-  id=$(ps -a | grep qq_bot | awk 'NR==1 {print $1}')
-  echo "kill old, $id"
-  kill $id
+if [[ $(ps -a | grep "[q]q_bot" | wc -l) -ge "1" ]];then
+  for id in $(ps -a | grep "[q]q_bot" | awk '{print $1}');do
+    echo "kill old, $id"
+    kill $id
+  done
 fi
 
 pybin="/Users/ytl/.pyenv/versions/3.6.5/bin/python3"

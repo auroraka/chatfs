@@ -14,6 +14,7 @@ end_list = {}
 in_list = {}
 time_list = {}
 name_list = {}
+work_list = {}
 SHUT_UP_UTLL = None  # 沉默时间
 
 
@@ -30,6 +31,8 @@ def save_commands():
         json.dump(time_list, f,default=json_util.default)
     with open('save/name_list.txt', 'w') as f:
         json.dump(name_list, f)
+    with open('save/work_list.txt', 'w') as f:
+        json.dump(work_list, f)
 
 def print_commands():
     print('load_commands:')
@@ -48,12 +51,17 @@ def print_commands():
     print('time_list:')
     for k,v in time_list.items():
         print('\t',k,'=>',v)
+    print('work_list:')
+    for k,v in work_list.items():
+        print('\t',k,'=>',v)
+
 def load_commands():
     global start_list
     global end_list
     global in_list
     global name_list
     global time_list
+    global work_list
     with open('save/start_list.txt', 'r') as f:
         start_list = json.load(f)
     with open('save/end_list.txt', 'r') as f:
@@ -64,6 +72,8 @@ def load_commands():
         time_list = json.load(f,object_hook=json_util.object_hook)
     with open('save/name_list.txt', 'r') as f:
         name_list = json.load(f)
+    with open('save/work_list.txt', 'r') as f:
+        work_list = json.load(f)
 
 load_commands()
 print_commands()
@@ -93,12 +103,7 @@ def get_h_m_s(secs):
 last_report = datetime.datetime.now()-datetime.timedelta(minutes=30)
 
 def report(m=None):
-    #member = {
-    #    'uin1344189666':'黄豪硕',
-    #    'uin1158312487':'杨天龙',
-    #    'uin3177575377':'胡泽聪',
-    #    'uin3285230888':'苏克'
-    #}
+    work = work_list[m.name] if m.name in work_list else '论文答辩'
     name = name_list[m.name] if m.name in name_list else m.name
     ddl = time_list.get(m.name,None)
     if not ddl:
@@ -107,10 +112,18 @@ def report(m=None):
     global last_report
     now = datetime.datetime.now()
     last_report = now
-    d = ddl - now
+    finish=False
+    if ddl > now:
+        d = ddl - now
+    else:
+        d = now - ddl
+        finish = True
     print('secs remain',d.days*3600*24+d.seconds)
     h,m,s = get_h_m_s(d.days*3600*24+d.seconds)
-    return '你好,{}, 距离你的论文答辩还剩 {}小时 {}分 {}秒'.format(name,h,m,s)
+    if finish:
+        return '你好,{}, 距离你的{}已过去 {}小时 {}分 {}秒,可喜可贺'.format(name,work,h,m,s)
+    else:
+        return '你好,{}, 距离你的{}还剩 {}小时 {}分 {}秒'.format(name,work,h,m,s)
 
 def check_report():
     now = datetime.datetime.now()
@@ -193,17 +206,21 @@ def deal_command(text,member=None):
     print('[text]',text)
     args = text.split(' ')
     print(len(args), args[0])
-    if args[0] == '\\register':
+    if args[0] == '\\ddl_name':
+        work_list[member.name]=args[1]
+        save_commands()
+        return 'done'
+    elif args[0] == '\\register':
         name_list[member.name]=args[1]
         save_commands()
         return '注册用户{}为{} 成功'.format(member.name,args[1])
-    if args[0] == '\\ddl':
+    elif args[0] == '\\ddl':
         cmd = ' '.join(args[1:])
         t = parser.parse(cmd)
         time_list[member.name]=t
         save_commands()
         return 'done'
-    if args[0] == '\\begin':
+    elif args[0] == '\\begin':
         if args[1]:
             start_list[args[1]] = ' '.join(args[2:])
             save_commands()
@@ -276,6 +293,7 @@ def deal_command(text,member=None):
                '\\time\n' \
                '\\register [name] (register your nick name)\n' \
                '\\ddl [time] (register your ddl)\n' \
+               '\\ddl_name [name]\n' \
                '\\help'
         # '\\_listall\n' \
     return random.choice(['不懂', '听不懂', '你说啥'])
